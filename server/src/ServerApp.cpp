@@ -86,11 +86,63 @@ void ServerApp::Loop()
 		default:
 			std::cout << "Unhandled Message Identifier: " << (int)msgid << std::endl;
 		}
+		//server controlled AI
+		float dt = RakNet::GetTime();
+		Shiptimer += dt;
+		ShipUpdateTimer += dt;
+		if (Shiptimer > 5.0f)
+		{
 
+			RakNet::BitStream bs2;
+			float x = (rand() % 50)-25;
+			int ships_amt = rand() % 7+1;
+			unsigned char msgid = ID_NEWENEMYSHIP;
+			unsigned int type = 1;
+			//RakNet::BitStream bs;
+			for (int i = 0; i < ships_amt; ++i)
+			{
+				Ship* tempship = new Ship(type, x, 100 + 25* i);
+				tempship->setID(ships.size());
+				ships.push_back(tempship);
+				bs2.Write(msgid);
+				bs2.Write((unsigned int)tempship->GetID()+1);
+				bs2.Write(type);
+				bs2.Write(tempship->GetX());
+				bs2.Write(tempship->GetY());
+				rakpeer_->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, packet->systemAddress, true);
+				bs2.Reset();
+			}
+			Shiptimer = 0;
+		}
+		if (ShipUpdateTimer > 0.1f)
+		{
+			RakNet::BitStream bs3;
+			for (int i = 0; i < ships.size(); ++i)
+			{
+				bs3.Reset();
+				ships[i]->AccelerateY(1.f, dt, false);
+				ships[i]->EnemyUpdate(dt);
+				bs3.Write(ID_UPDATEENEMYSHIP);
+				bs3.Write(ships[i]->GetID());
+				bs3.Write(ships[i]->GetX());
+				bs3.Write(ships[i]->GetY());
+				bs3.Write(ships[i]->GetVelocityX());
+				bs3.Write(ships[i]->GetVelocityX());
+				rakpeer_->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, packet->systemAddress, true);
+			}
+			ShipUpdateTimer = 0;
+		}
 		rakpeer_->DeallocatePacket(packet);
 	}
 }
-
+void ServerApp::UpdateShips(float dt)
+{
+	for (int i = 0; i < ships.size(); ++i)
+	{
+		ships[i]->AccelerateY(0.1, dt, false);
+		ships[i]->Update(dt);
+	}
+}
 void ServerApp::SendWelcomePackage(SystemAddress& addr)
 {
 	++newID;

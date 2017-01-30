@@ -116,22 +116,23 @@ bool Application::Update()
 
     if( hge_->Input_GetKeyState( HGEK_LEFT ) )
     {
-        ships_.at( 0 )->SetAngularVelocity( ships_.at( 0 )->GetAngularVelocity( ) - DEFAULT_ANGULAR_VELOCITY );
+       // ships_.at( 0 )->SetAngularVelocity( ships_.at( 0 )->GetAngularVelocity( ) - DEFAULT_ANGULAR_VELOCITY );
+		ships_.at(0)->AccelerateX(DEFAULT_ACCELERATION, timedelta, false);
     }
 
     if( hge_->Input_GetKeyState( HGEK_RIGHT ) )
     {
-        ships_.at( 0 )->SetAngularVelocity( ships_.at( 0 )->GetAngularVelocity( ) + DEFAULT_ANGULAR_VELOCITY );
+		ships_.at(0)->AccelerateX(DEFAULT_ACCELERATION, timedelta, true);
     }
 
     if( hge_->Input_GetKeyState( HGEK_UP ) )
     {
-        ships_.at( 0 )->Accelerate( DEFAULT_ACCELERATION, timedelta );
+        ships_.at( 0 )->AccelerateY( DEFAULT_ACCELERATION, timedelta ,true);
     }
 
     if( hge_->Input_GetKeyState( HGEK_DOWN ) )
     {
-        ships_.at( 0 )->Accelerate( -DEFAULT_ACCELERATION, timedelta );
+        ships_.at( 0 )->AccelerateY( DEFAULT_ACCELERATION, timedelta ,false);
     }
 
     if( hge_->Input_GetKeyState( HGEK_SPACE ) )
@@ -172,7 +173,8 @@ bool Application::Update()
 	//update missiles
 	for (int i = 0; i < mymissile.size();++i)
 	{
-		if( mymissile.at(i)->Update( ships_, timedelta ) )
+		int a = mymissile.at(i)->Update(ships_, timedelta);
+		if(a == 1)
 		{
 			// have collision
 			std::swap(mymissile[mymissile.size() - 1], mymissile[i]);
@@ -186,17 +188,24 @@ bool Application::Update()
 			bs.Reset();
 			delete temp;
 		}
+		else if (a == 2)
+		{
+			std::swap(mymissile[mymissile.size() - 1], mymissile[i]);
+			Missile* temp = mymissile[mymissile.size() - 1];
+			mymissile.pop_back();
+			delete temp;
+		}
 	}
 	for (MissileList::iterator missile = missiles_.begin();missile != missiles_.end(); missile++)
 	{
-		(*missile)->Update(ships_, timedelta);
-		//if( )
-		//{
-		//	// have collision
-		//	//delete *missile;
-		//	//missiles_.erase(missile);
-		//	break;
-		//}
+		
+		if ((*missile)->Update(ships_, timedelta) == 2)
+		{
+			// have collision
+			delete *missile;
+			missiles_.erase(missile);
+			break;
+		}
 	}
 	if (Packet* packet = rakpeer_->Receive())
 	{
@@ -422,6 +431,40 @@ bool Application::Update()
 			}
 
 		}
+		case ID_NEWENEMYSHIP:
+		{
+			int type;
+			int ID;
+			float x, y;
+			bs.Read(ID);
+			bs.Read(type);
+			bs.Read(x);
+			bs.Read(y);
+			Ship* ship = new Ship(type, x, y);
+			ship->setID(ID);
+			EnemyShips.push_back(ship);
+			std::cout << EnemyShips.size() << std::endl;
+			break;
+		}
+		case ID_UPDATEENEMYSHIP:
+		{
+			unsigned int shipid;
+			float server_x, server_y, server_w;
+			float server_vel_x, server_vel_y, server_vel_angular;
+			bs.Read(shipid);
+			bs.Read(server_x);
+			bs.Read(server_y);
+			//bs.Read(server_w);
+			bs.Read(server_vel_x);
+			bs.Read(server_vel_y);
+			//bs.Read(server_vel_angular);
+
+			EnemyShips[shipid-1]->SetServerLocation(server_x, server_y, server_w);
+			EnemyShips[shipid-1]->SetServerVelocity(server_vel_x, server_vel_y, server_vel_angular);
+			EnemyShips[shipid-1]->DoInterpolateUpdate();
+			break;
+		}
+
 			break;
 		default:
 			std::cout << "Unhandled Message Identifier: " << (int)msgid << std::endl;

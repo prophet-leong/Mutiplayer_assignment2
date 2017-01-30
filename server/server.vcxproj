@@ -89,11 +89,13 @@
   <ItemGroup>
     <ClCompile Include="src\Server.cpp" />
     <ClCompile Include="src\ServerApp.cpp" />
+    <ClCompile Include="src\ship.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\share\config.h" />
     <ClInclude Include="..\share\MyMsgIDs.h" />
     <ClInclude Include="src\ServerApp.h" />
+    <ClInclude Include="src\ship.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

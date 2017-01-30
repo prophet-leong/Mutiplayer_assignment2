@@ -64,11 +64,14 @@ class Ship
     unsigned int collidetimer;
 public:
 
-    Ship( int type, float locx_, float locy_ );
-    ~Ship( );
+    Ship( int type, float locx_, float locy_);
+    ~Ship();
     void Update( float timedelta );
+	void EnemyUpdate(float timedelta);
     void Render( );
-    void Accelerate( float acceleration, float timedelta );
+	void EnemyRender();
+	void AccelerateX( float acceleration, float timedelta ,bool direction);
+	void AccelerateY(float acceleration, float timedelta, bool direction);
     void SetName( const char * text );
 
     hgeRect* GetBoundingBox( );

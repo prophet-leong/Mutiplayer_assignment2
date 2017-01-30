@@ -29,6 +29,7 @@ class Application
 	typedef std::vector<Ship*> ShipList;  //!< A list of ships
 	typedef std::vector<Missile*> MissileList;
 	ShipList ships_; //!< List of all the ships in the universe
+	ShipList EnemyShips;
     Asteroid *asteroid;
 	MissileList missiles_;
 	MissileList mymissile;

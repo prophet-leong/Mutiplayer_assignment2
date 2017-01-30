@@ -20,6 +20,9 @@
     <ClCompile Include="src\ServerApp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\ship.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\ServerApp.h">
@@ -30,6 +33,9 @@
     </ClInclude>
     <ClInclude Include="..\share\config.h">
       <Filter>Share</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ship.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

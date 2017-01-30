@@ -3,7 +3,8 @@
 
 #include <map>
 #include "RakNetTypes.h"
-
+#include <vector>
+#include "ship.h"
 class RakPeerInterface;
 
 struct GameObject 
@@ -28,11 +29,14 @@ class ServerApp
 	ClientMap clients_;
 
     unsigned int newID;
-	
+	float Shiptimer = 0;
+	float ShipUpdateTimer = 0;
+	std::vector<Ship*>ships;
 	void SendWelcomePackage(SystemAddress& addr);
 	void SendDisconnectionNotification(SystemAddress& addr);
 	void ProcessInitialPosition( SystemAddress& addr, float x_, float y_, int type_);
     void UpdatePosition( SystemAddress& addr, float x_, float y_ );
+	void UpdateShips(float dt);
 public:
 	ServerApp();
 	~ServerApp();

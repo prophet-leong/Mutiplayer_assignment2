@@ -17,18 +17,18 @@
 * @param filename Name of the graphics file used to represent the ship
 */
 
-const float PI = 3.141592f;
+const float PI = 3.141592f*2;
 
-Ship::Ship( int type, float locx_, float locy_ )
-: w_( 0 )
+Ship::Ship( int type, float locx_, float locy_)
+: w_( -PI/4 )
 , angular_velocity( 0 )
 , velocity_x_( 0 )
 , velocity_y_( 0 )
 , id( 0 )
 , collidetimer( 0 )
 #ifdef INTERPOLATEMOVEMENT
-, server_w_( 0 )
-, client_w_( 0 )
+, server_w_(-PI / 4)
+, client_w_(-PI / 4)
 , server_velx_( 0 )
 , server_vely_( 0 )
 , ratio_( 1 )
@@ -115,31 +115,30 @@ Ship::~Ship()
 void Ship::Update(float timedelta)
 {
 	HGE* hge = hgeCreate(HGE_VERSION);
-	float pi = 3.141592654f*2;
 
-	server_w_ += angular_velocity * timedelta;
+	//server_w_ += angular_velocity * timedelta;
 
-	if (server_w_ > pi)
-		server_w_ -= pi;
+	//if (server_w_ > PI)
+	//	server_w_ -= PI;
 
-	if (server_w_ < 0.0f)
-		server_w_ += pi;
+	//if (server_w_ < 0.0f)
+	//	server_w_ += PI;
 
-	client_w_ += angular_velocity * timedelta;
+	//client_w_ += angular_velocity * timedelta;
 
-	if (client_w_ > pi)
-		client_w_ -= pi;
+	//if (client_w_ > PI)
+	//	client_w_ -= PI;
 
-	if (client_w_ < 0.0f)
-		client_w_ += pi;
+	//if (client_w_ < 0.0f)
+	//	client_w_ += PI;
 
-	w_ = ratio_ * server_w_ + (1 - ratio_) * client_w_;
+	//w_ = ratio_ * server_w_ + (1 - ratio_) * client_w_;
 
-	if (w_ > pi)
-		w_ -= pi;
+	//if (w_ > PI)
+	//	w_ -= PI;
 
-	if (w_ < 0.0f)
-		w_ += pi;
+	//if (w_ < 0.0f)
+	//	w_ += PI;
 
 	float screenwidth = static_cast<float>(hge->System_GetState(HGE_SCREENWIDTH));
 	float screenheight = static_cast<float>(hge->System_GetState(HGE_SCREENHEIGHT));
@@ -151,30 +150,42 @@ void Ship::Update(float timedelta)
 	server_y_ += server_vely_ * timedelta;
 
 	// Deadreckon
-	if (server_x_ < -spritewidth/2)
-		server_x_ += screenwidth + spritewidth;
-	else if (server_x_ > screenwidth + spritewidth/2)
-		server_x_ -= screenwidth + spritewidth;
+	if (server_x_ < spritewidth / 2)
+	{
+		server_x_ = spritewidth / 2+5;
+		server_velx_ = 0;
+	}
+	else if (server_x_ > screenwidth - spritewidth / 2)
+	{
+		server_x_ = screenwidth - spritewidth / 2-5;
+		server_velx_ = 0;
+	}
 
-	if (server_y_ < -spriteheight/2)
-		server_y_ += screenheight + spriteheight;
-	else if (server_y_ > screenheight + spriteheight/2)
-		server_y_ -= screenheight + spriteheight;
+	if (server_y_ < spriteheight / 2)
+	{
+		server_y_ = spriteheight / 2+5;
+		server_vely_ = 0;
+	}
+	else if (server_y_ > screenheight - spriteheight / 2)
+	{
+		server_y_ = screenheight - spriteheight / 2-5;
+		server_vely_ = 0;
+	}
 	
 
 	client_x_ += velocity_x_ * timedelta;
 	client_y_ += velocity_y_ * timedelta;
 
 	// Deadreckon
-	if (client_x_ < -spritewidth/2)
-		client_x_ += screenwidth + spritewidth;
-	else if (client_x_ > screenwidth + spritewidth/2)
-		client_x_ -= screenwidth + spritewidth;
+	if (client_x_ < spritewidth/2)
+		client_x_ = spritewidth/2;
+	else if (client_x_ > screenwidth - spritewidth/2)
+		client_x_ = screenwidth - spritewidth/2;
 
-	if (client_y_ < -spriteheight/2)
-		client_y_ += screenheight + spriteheight;
-	else if (client_y_ > screenheight + spriteheight/2)
-		client_y_ -= screenheight + spriteheight;
+	if (client_y_ < spriteheight/2)
+		client_y_ = spriteheight/2;
+	else if (client_y_ > screenheight - spriteheight/2)
+		client_y_ = screenheight - spriteheight/2;
 
 
 	x_ = ratio_ * server_x_ + (1 - ratio_) * client_x_;
@@ -187,17 +198,43 @@ void Ship::Update(float timedelta)
 			ratio_ = 1;
 	}
 
-	if (x_ < -spritewidth/2)
-		x_ += screenwidth + spritewidth;
-	else if (x_ > screenwidth + spritewidth/2)
-		x_ -= screenwidth + spritewidth;
+	if (x_ < spritewidth/2)
+		x_ = spritewidth/2+5;
+	else if (x_ > screenwidth - spritewidth/2)
+		x_ =  screenwidth - spritewidth/2;
 
-	if (y_ < -spriteheight/2)
-		y_ += screenheight + spriteheight;
-	else if (y_ > screenheight + spriteheight/2)
-		y_ -= screenheight + spriteheight;
+	if (y_ < spriteheight/2)
+		y_ = spriteheight/2;
+	else if (y_ > screenheight - spriteheight/2)
+		y_ = screenheight - spriteheight/2;
 }
 
+void Ship::EnemyUpdate(float timedelta)
+{
+	HGE* hge = hgeCreate(HGE_VERSION);
+
+	float screenwidth = static_cast<float>(hge->System_GetState(HGE_SCREENWIDTH));
+	float screenheight = static_cast<float>(hge->System_GetState(HGE_SCREENHEIGHT));
+	float spritewidth = sprite_->GetWidth();
+	float spriteheight = sprite_->GetHeight();
+
+
+	/*server_x_ += server_velx_ * timedelta;
+	server_y_ += server_vely_ * timedelta;
+
+	client_x_ += velocity_x_ * timedelta;
+	client_y_ += velocity_y_ * timedelta;*/
+
+	x_ = ratio_ * server_x_ + (1 - ratio_) * client_x_;
+	y_ = ratio_ * server_y_ + (1 - ratio_) * client_y_;
+
+	if (ratio_ < 1)
+	{
+		ratio_ += timedelta * 4;
+		if (ratio_ > 1)
+			ratio_ = 1;
+	}
+}
 
 /**
 * Render Cycle
@@ -214,6 +251,10 @@ void Ship::Render()
 	font_->printf(x_+5, y_+5, HGETEXT_LEFT, "%s", mytext_.c_str());
 }
 
+void Ship::EnemyRender()
+{
+	sprite_->RenderEx(x_, y_, w_);
+}
 /**
 * Accelerates a ship by the given acceleration (i.e. increases
 * the ships velocity in the direction it is pointing in)
@@ -222,12 +263,20 @@ void Ship::Render()
 * @param timedelta Time passed since last frame
 */
 
-void Ship::Accelerate(float acceleration, float timedelta)
+void Ship::AccelerateY(float acceleration, float timedelta,bool direction)
 {
-	server_velx_ += acceleration * cosf(w_) * timedelta;
-	server_vely_ += acceleration * sinf(w_) * timedelta;
+	if (direction)
+		server_vely_ -= acceleration * timedelta;
+	else
+		server_vely_ += acceleration *  timedelta;
 }
-
+void Ship::AccelerateX(float acceleration, float timedelta,bool direction)
+{
+	if (direction)
+		server_velx_ += acceleration * timedelta;
+	else
+		server_velx_ -= acceleration * timedelta;
+}
 void Ship::SetName(const char * text)
 {
 	mytext_.clear();

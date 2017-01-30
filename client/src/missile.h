@@ -28,7 +28,7 @@ public:
 	float angular_velocity;
 	Missile(char* filename, float x, float y, float w, int shipid,int missileID);
 	~Missile();
-	bool Update(std::vector<Ship*> &shiplist, float timedelta);
+	int Update(std::vector<Ship*> &shiplist, float timedelta);
 	void Render();
 	bool HasCollided( Ship &ship );
 
