@@ -27,7 +27,7 @@ class ServerApp
 	typedef std::map<SystemAddress, GameObject> ClientMap;
 
 	ClientMap clients_;
-
+	HGE* hge_;
     unsigned int newID;
 	float Shiptimer = 0;
 	float ShipUpdateTimer = 0;

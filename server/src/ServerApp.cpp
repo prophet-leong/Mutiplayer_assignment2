@@ -9,7 +9,8 @@
 #include "MyMsgIDs.h"
 
 #include "ServerApp.h"
-
+static float tick = 0, last_tick = 0;
+float dt = 0;
 ServerApp::ServerApp() : 
 	rakpeer_(RakNetworkFactory::GetRakPeerInterface()),
 	newID(0)
@@ -87,34 +88,38 @@ void ServerApp::Loop()
 			std::cout << "Unhandled Message Identifier: " << (int)msgid << std::endl;
 		}
 		//server controlled AI
-		float dt = RakNet::GetTime();
+		tick = GetTickCount();
+		dt = tick - last_tick;
+		dt /= 1000.0f;
+		last_tick = tick;
 		Shiptimer += dt;
 		ShipUpdateTimer += dt;
-		if (Shiptimer > 5.0f)
+		if (Shiptimer > 10.0f)
 		{
 
 			RakNet::BitStream bs2;
-			float x = (rand() % 50)-25;
-			int ships_amt = rand() % 7+1;
+			float x = (rand() % 50)+100;
+			int ships_amt = rand() % 2+1;
 			unsigned char msgid = ID_NEWENEMYSHIP;
 			unsigned int type = 1;
 			//RakNet::BitStream bs;
 			for (int i = 0; i < ships_amt; ++i)
 			{
-				Ship* tempship = new Ship(type, x, 100 + 25* i);
+				Ship* tempship = new Ship(type, x, 0 - 25* i);
 				tempship->setID(ships.size());
 				ships.push_back(tempship);
 				bs2.Write(msgid);
-				bs2.Write((unsigned int)tempship->GetID()+1);
+				bs2.Write(tempship->GetID()+1);
 				bs2.Write(type);
 				bs2.Write(tempship->GetX());
 				bs2.Write(tempship->GetY());
-				rakpeer_->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, packet->systemAddress, true);
-				bs2.Reset();
+				bool tempsent = rakpeer_->Send(&bs2, HIGH_PRIORITY, RELIABLE, 0, packet->systemAddress, false);
+				//bs2.Reset();
+				std::cout << tempsent << std::endl;
 			}
 			Shiptimer = 0;
 		}
-		if (ShipUpdateTimer > 0.1f)
+		if (ShipUpdateTimer > 0.3f)
 		{
 			RakNet::BitStream bs3;
 			for (int i = 0; i < ships.size(); ++i)
@@ -127,8 +132,8 @@ void ServerApp::Loop()
 				bs3.Write(ships[i]->GetX());
 				bs3.Write(ships[i]->GetY());
 				bs3.Write(ships[i]->GetVelocityX());
-				bs3.Write(ships[i]->GetVelocityX());
-				rakpeer_->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, packet->systemAddress, true);
+				bs3.Write(ships[i]->GetVelocityY());
+				rakpeer_->Send(&bs3, HIGH_PRIORITY, RELIABLE, 0, packet->systemAddress, false);
 			}
 			ShipUpdateTimer = 0;
 		}

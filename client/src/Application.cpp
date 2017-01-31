@@ -157,7 +157,10 @@ bool Application::Update()
 	{
 		(*ship)->Update(timedelta);
 	}
-
+	for (int i = 0; i < EnemyShips.size(); ++i)
+	{
+		EnemyShips[i]->EnemyUpdate(timedelta);
+	}
     // update asteroid
     if( asteroid )
     {
@@ -429,7 +432,7 @@ bool Application::Update()
 					 break;
 				 }
 			}
-
+			break;
 		}
 		case ID_NEWENEMYSHIP:
 		{
@@ -443,13 +446,13 @@ bool Application::Update()
 			Ship* ship = new Ship(type, x, y);
 			ship->setID(ID);
 			EnemyShips.push_back(ship);
-			std::cout << EnemyShips.size() << std::endl;
+			//std::cout << EnemyShips.size() << std::endl;
 			break;
 		}
 		case ID_UPDATEENEMYSHIP:
 		{
 			unsigned int shipid;
-			float server_x, server_y, server_w;
+			float server_x, server_y, server_w = 0;
 			float server_vel_x, server_vel_y, server_vel_angular;
 			bs.Read(shipid);
 			bs.Read(server_x);
@@ -459,9 +462,9 @@ bool Application::Update()
 			bs.Read(server_vel_y);
 			//bs.Read(server_vel_angular);
 
-			EnemyShips[shipid-1]->SetServerLocation(server_x, server_y, server_w);
-			EnemyShips[shipid-1]->SetServerVelocity(server_vel_x, server_vel_y, server_vel_angular);
-			EnemyShips[shipid-1]->DoInterpolateUpdate();
+			EnemyShips[shipid]->SetServerLocation(server_x, server_y, server_w);
+			EnemyShips[shipid]->SetServerVelocity(server_vel_x, server_vel_y, server_vel_angular);
+			EnemyShips[shipid]->DoInterpolateUpdate();
 			break;
 		}
 
@@ -494,24 +497,6 @@ bool Application::Update()
 		RakNet::BitStream bs3;
 		unsigned char msgid2 = ID_UPDATEMISSILE;
 		unsigned char deleted = 0;
-		//++updatemissile;
-		//if (updatemissile >= 20)
-		//{
-		//	updatemissile = 0;
-		//	// send missile update to server
-		//	for (int i = 0; i < mymissile.size();++i)
-		//	{
-		//		bs3.Write(msgid2);
-		//		bs3.Write(ships_[0]->GetID());
-		//		bs3.Write(mymissile[i]->missileID);
-		//		bs3.Write(mymissile[i]->GetX());
-		//		bs3.Write(mymissile[i]->GetY());
-		//		bs3.Write(mymissile[i]->GetW());
-		//		rakpeer_->Send(&bs3, HIGH_PRIORITY, UNRELIABLE_SEQUENCED, 0, UNASSIGNED_SYSTEM_ADDRESS, true);
-		//		bs3.Reset();
-		//	}
-
-		//}
 	}
 
 	return false;
@@ -543,7 +528,10 @@ void Application::Render()
 	{
 		(*itr)->Render();
 	}
-
+	for (int i = 0; i < EnemyShips.size(); ++i)
+	{
+		EnemyShips[i]->EnemyRender();
+	}
 	for (int i = 0; i < mymissile.size(); ++i)
 	{
 		mymissile.at(i)->Render();
