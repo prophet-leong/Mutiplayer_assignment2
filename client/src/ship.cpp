@@ -211,29 +211,8 @@ void Ship::Update(float timedelta)
 
 void Ship::EnemyUpdate(float timedelta)
 {
-	HGE* hge = hgeCreate(HGE_VERSION);
-
-	float screenwidth = static_cast<float>(hge->System_GetState(HGE_SCREENWIDTH));
-	float screenheight = static_cast<float>(hge->System_GetState(HGE_SCREENHEIGHT));
-	float spritewidth = sprite_->GetWidth();
-	float spriteheight = sprite_->GetHeight();
-
-
-	/*server_x_ += server_velx_ * timedelta;
-	server_y_ += server_vely_ * timedelta;
-
-	client_x_ += velocity_x_ * timedelta;
-	client_y_ += velocity_y_ * timedelta;*/
-
-	x_ = ratio_ * server_x_ + (1 - ratio_) * client_x_;
-	y_ = ratio_ * server_y_ + (1 - ratio_) * client_y_;
-
-	if (ratio_ < 1)
-	{
-		ratio_ += timedelta * 4;
-		if (ratio_ > 1)
-			ratio_ = 1;
-	}
+	x_ += velocity_x_ * timedelta;
+	y_ += velocity_y_*timedelta;
 }
 
 /**

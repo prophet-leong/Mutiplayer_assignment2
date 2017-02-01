@@ -437,7 +437,7 @@ bool Application::Update()
 		case ID_NEWENEMYSHIP:
 		{
 			int type;
-			int ID;
+			unsigned char ID;
 			float x, y;
 			bs.Read(ID);
 			bs.Read(type);
@@ -446,25 +446,28 @@ bool Application::Update()
 			Ship* ship = new Ship(type, x, y);
 			ship->setID(ID);
 			EnemyShips.push_back(ship);
-			//std::cout << EnemyShips.size() << std::endl;
 			break;
 		}
 		case ID_UPDATEENEMYSHIP:
 		{
-			unsigned int shipid;
-			float server_x, server_y, server_w = 0;
-			float server_vel_x, server_vel_y, server_vel_angular;
+			unsigned int shipid = 0;
+			float server_x, server_y;
+			float server_vel_x, server_vel_y;
+			
 			bs.Read(shipid);
 			bs.Read(server_x);
 			bs.Read(server_y);
-			//bs.Read(server_w);
 			bs.Read(server_vel_x);
 			bs.Read(server_vel_y);
-			//bs.Read(server_vel_angular);
-
-			EnemyShips[shipid]->SetServerLocation(server_x, server_y, server_w);
-			EnemyShips[shipid]->SetServerVelocity(server_vel_x, server_vel_y, server_vel_angular);
-			EnemyShips[shipid]->DoInterpolateUpdate();
+			//shipid /= 16777216;
+			std::cout << shipid << " SHIP_ID" << server_vel_y << std::endl;
+			
+			EnemyShips[shipid]->SetX(server_x);
+			EnemyShips[shipid]->SetY(server_y);
+	
+			EnemyShips[shipid]->SetVelocityX(server_vel_x);
+			EnemyShips[shipid]->SetVelocityY(server_vel_y);
+			//EnemyShips[shipid]->DoInterpolateUpdate();
 			break;
 		}
 
