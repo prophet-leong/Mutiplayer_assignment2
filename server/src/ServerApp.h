@@ -37,6 +37,7 @@ class ServerApp
 	void ProcessInitialPosition( SystemAddress& addr, float x_, float y_, int type_);
     void UpdatePosition( SystemAddress& addr, float x_, float y_ );
 	void UpdateShips(float dt);
+	void SendUpdatedShips(float dt, SystemAddress& addr);
 public:
 	ServerApp();
 	~ServerApp();

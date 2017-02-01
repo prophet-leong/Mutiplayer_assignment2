@@ -19,6 +19,8 @@ ServerApp::ServerApp() :
     rakpeer_->SetMaximumIncomingConnections( DFL_MAX_CONNECTION );
 	rakpeer_->SetOccasionalPing(true);
 	std::cout << "Server Started" << std::endl;
+	Shiptimer = 0;
+	ShipUpdateTimer = 0;
 }
 
 ServerApp::~ServerApp()
@@ -92,60 +94,75 @@ void ServerApp::Loop()
 		dt = tick - last_tick;
 		dt /= 1000.0f;
 		last_tick = tick;
-		Shiptimer += dt;
-		ShipUpdateTimer += dt;
+		if (dt < 1)
+		{
+			Shiptimer += dt;
+			ShipUpdateTimer += dt;
+		}
+		for (int i = 0; i<ships.size(); ++i)
+		{
+			ships[i]->EnemyUpdate(dt);
+		}
 		if (Shiptimer > 10.0f)
 		{
-
 			RakNet::BitStream bs2;
-			float x = (rand() % 50)+100;
+			float x = (rand() % 50)+200;
 			int ships_amt = rand() % 2+1;
 			unsigned char msgid = ID_NEWENEMYSHIP;
 			unsigned int type = 1;
 			//RakNet::BitStream bs;
 			for (int i = 0; i < ships_amt; ++i)
 			{
-				Ship* tempship = new Ship(type, x, 0 - 25* i);
-				tempship->setID(ships.size());
+				Ship* tempship = new Ship(type, x, 200 - 25* i);
+				int ID = ships.size();
+				tempship->setID(ID);
 				ships.push_back(tempship);
 				bs2.Write(msgid);
-				bs2.Write(tempship->GetID()+1);
+				bs2.Write(ID);
 				bs2.Write(type);
 				bs2.Write(tempship->GetX());
 				bs2.Write(tempship->GetY());
-				bool tempsent = rakpeer_->Send(&bs2, HIGH_PRIORITY, RELIABLE, 0, packet->systemAddress, false);
-				//bs2.Reset();
-				std::cout << tempsent << std::endl;
+				std::cout << tempship->GetX() << "    " << tempship->GetY() << std::endl;
+				rakpeer_->Send(&bs2, HIGH_PRIORITY, RELIABLE, 0, packet->systemAddress, false);
+				bs2.Reset();
 			}
 			Shiptimer = 0;
 		}
-		if (ShipUpdateTimer > 0.3f)
-		{
-			RakNet::BitStream bs3;
-			for (int i = 0; i < ships.size(); ++i)
-			{
-				bs3.Reset();
-				ships[i]->AccelerateY(1.f, dt, false);
-				ships[i]->EnemyUpdate(dt);
-				bs3.Write(ID_UPDATEENEMYSHIP);
-				bs3.Write(ships[i]->GetID());
-				bs3.Write(ships[i]->GetX());
-				bs3.Write(ships[i]->GetY());
-				bs3.Write(ships[i]->GetVelocityX());
-				bs3.Write(ships[i]->GetVelocityY());
-				rakpeer_->Send(&bs3, HIGH_PRIORITY, RELIABLE, 0, packet->systemAddress, false);
-			}
-			ShipUpdateTimer = 0;
-		}
+		SendUpdatedShips(dt, packet->systemAddress);
 		rakpeer_->DeallocatePacket(packet);
+	}
+}
+void ServerApp::SendUpdatedShips(float dt, SystemAddress& addr)
+{
+	if (ShipUpdateTimer > 1.3f)
+	{
+		RakNet::BitStream bs;
+		unsigned char msgid = ID_UPDATEENEMYSHIP;
+		for (int i = 0; i < ships.size(); ++i)
+		{
+			//bs.ResetReadPointer();
+			ships[i]->SetVelocityY(3.0f);
+			ships[i]->SetVelocityX(10.0f);
+			unsigned int shipid = ships[i]->GetID();
+			bs.Write(msgid);
+			bs.Write(shipid);
+			bs.Write(ships[i]->GetX());
+			bs.Write(ships[i]->GetY());
+			bs.Write(ships[i]->GetVelocityX());
+			bs.Write(ships[i]->GetVelocityY());
+			//std::cout << ships[i]->GetX() << "  velocity Y  " << ships[i]->GetY() << std::endl;
+			rakpeer_->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, addr, false);
+			bs.Reset();
+		}
+		ShipUpdateTimer = 0;
 	}
 }
 void ServerApp::UpdateShips(float dt)
 {
 	for (int i = 0; i < ships.size(); ++i)
 	{
-		ships[i]->AccelerateY(0.1, dt, false);
-		ships[i]->Update(dt);
+		ships[i]->AccelerateY(-1, dt, false);
+		ships[i]->EnemyUpdate(dt);
 	}
 }
 void ServerApp::SendWelcomePackage(SystemAddress& addr)
@@ -171,7 +188,18 @@ void ServerApp::SendWelcomePackage(SystemAddress& addr)
 	rakpeer_->Send(&bs, HIGH_PRIORITY, RELIABLE_ORDERED,0, addr, false);
 
 	bs.Reset();
-
+	//send in the enemy ships
+	msgid = ID_NEWENEMYSHIP;
+	for (int i = 0; i < ships.size(); ++i)
+	{
+		bs.Write(msgid);
+		bs.Write(ships[i]->GetID());
+		bs.Write(ships[i]->GetType());
+		bs.Write(ships[i]->GetX());
+		bs.Write(ships[i]->GetY());
+		rakpeer_->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, addr, false);
+		bs.Reset();
+	}
 	GameObject newobject(newID);
 
 	clients_.insert(std::make_pair(addr, newobject));
