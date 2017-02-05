@@ -10,7 +10,11 @@
 class hgeSprite;
 class hgeRect;
 class Ship;
-
+struct Missile_Collided
+{
+	int collisionType = 0;
+	int ShipID = -1;
+};
 class Missile
 {
 	HTEXTURE tex_; //!< Handle to the sprite's texture
@@ -28,7 +32,7 @@ public:
 	float angular_velocity;
 	Missile(char* filename, float x, float y, float w, int shipid,int missileID);
 	~Missile();
-	int Update(std::vector<Ship*> &shiplist, float timedelta);
+	Missile_Collided Update(std::vector<Ship*> &shiplist, float timedelta);
 	void Render();
 	bool HasCollided( Ship &ship );
 

@@ -7,7 +7,9 @@
 #include "ship.h"
 #include "missile.h"
 #include "textbox.h"
-
+#include "PowerUp.h"
+#include "Collided_Position.h"
+#include "TimeBomb.h"
 class HGE;
 class RakPeerInterface;
 
@@ -30,6 +32,9 @@ class Application
 	typedef std::vector<Missile*> MissileList;
 	ShipList ships_; //!< List of all the ships in the universe
 	ShipList EnemyShips;
+	std::vector<PowerUp*>powerUps;
+	std::vector<Collided_Position*>CollidedPosition;
+	std::vector<TimeBomb*>timebomb;
     Asteroid *asteroid;
 	MissileList missiles_;
 	MissileList mymissile;
@@ -39,7 +44,9 @@ class Application
 	unsigned int timer_;
 	int totalsent_;
 	int totalreceived_;
-	bool have_missile;
+	//missile upgrades allows you to shoot more missile
+	unsigned int WeaponUpgradeTier;
+	bool have_bomb;
 	bool keydown_enter;
 
 	bool Init();

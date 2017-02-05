@@ -8,8 +8,8 @@
 #include "asteroid.h"
 
 Asteroid::Asteroid( char* filename ) :
-	x_(200),
-	y_(200), 
+	x_(0),
+	y_(0), 
 	w_(0),
 	angular_velocity(1),
 	velocity_x_(0),

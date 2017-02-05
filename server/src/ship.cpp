@@ -19,7 +19,7 @@
 
 const float PI = 3.141592f*2;
 
-Ship::Ship( int type, float locx_, float locy_)
+Ship::Ship( int type, float locx_, float locy_,int health_)
 : w_( -PI/4 )
 , angular_velocity( 0 )
 , velocity_x_( 0 )
@@ -32,6 +32,7 @@ Ship::Ship( int type, float locx_, float locy_)
 , server_velx_( 0 )
 , server_vely_( 0 )
 , ratio_( 1 )
+, health(health_)
 #endif
 {
     std::cout << "Creating Ship " << type << " " << locx_ << " " << locy_ << std::endl;
@@ -118,6 +119,8 @@ void Ship::EnemyUpdate(float timedelta)
 {
 	x_ += velocity_x_ * timedelta;
 	y_ += velocity_y_*timedelta;
+	if (x_ > 800 && velocity_x_ > 0 || x_ < 0 && velocity_x_ < 0)
+		velocity_x_ *= -1;
 }
 
 /**

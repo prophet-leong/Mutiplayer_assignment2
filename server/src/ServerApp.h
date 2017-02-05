@@ -5,6 +5,8 @@
 #include "RakNetTypes.h"
 #include <vector>
 #include "ship.h"
+#include "PowerUp.h"
+#include "TimeBomb.h"
 class RakPeerInterface;
 
 struct GameObject 
@@ -28,15 +30,25 @@ class ServerApp
 
 	ClientMap clients_;
 	HGE* hge_;
+	unsigned totalShips = 0;
+	unsigned totalPowerUps = 0;
     unsigned int newID;
 	float Shiptimer = 0;
 	float ShipUpdateTimer = 0;
 	std::vector<Ship*>ships;
+	std::vector<PowerUp*>powerUps;
+	std::vector<TimeBomb*>timeBomb;
 	void SendWelcomePackage(SystemAddress& addr);
 	void SendDisconnectionNotification(SystemAddress& addr);
 	void ProcessInitialPosition( SystemAddress& addr, float x_, float y_, int type_);
     void UpdatePosition( SystemAddress& addr, float x_, float y_ );
 	void UpdateShips(float dt);
+	void UpdateTimeBomb(float dt);
+	//creations for gameobj
+	void CreatePowerUps(float x,float y);
+	void RemovePowerUps(int PowerUPID);
+	void CreateShips();
+	void RemoveShips(int ShipId,int damage = 1);
 	void SendUpdatedShips(float dt, SystemAddress& addr);
 public:
 	ServerApp();

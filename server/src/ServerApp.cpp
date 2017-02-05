@@ -83,9 +83,34 @@ void ServerApp::Loop()
 				rakpeer_->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, packet->systemAddress, true);
 			break;
 		case ID_MISSILECOLLIDE:
-				bs.ResetReadPointer();
-				rakpeer_->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, packet->systemAddress, true);
+		{
+			int id;
+			int missileID;
+			int ShipID;
+			bs.Read(id);
+			bs.Read(missileID);
+			bs.Read(ShipID);
+			bs.ResetReadPointer();
+			rakpeer_->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, packet->systemAddress, true);//let the other clients have the data first
+			RemoveShips(ShipID);
 			break;
+		}
+		case ID_TIMEBOMBCREATE:
+		{
+			float x, y,radius,timer;
+			int ShipID;
+			bs.Read(x);
+			bs.Read(y);
+			bs.Read(radius);
+			bs.Read(timer);
+			bs.Read(ShipID);
+			TimeBomb * time_bomb = new TimeBomb(x, y, radius, timer,ShipID);
+			timeBomb.push_back(time_bomb);
+			bs.ResetReadPointer();
+			rakpeer_->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, packet->systemAddress, true);
+			std::cout << "Get time bomb" << std::endl;
+			break;
+		}
 		default:
 			std::cout << "Unhandled Message Identifier: " << (int)msgid << std::endl;
 		}
@@ -101,58 +126,98 @@ void ServerApp::Loop()
 		}
 		for (int i = 0; i<ships.size(); ++i)
 		{
-			ships[i]->EnemyUpdate(dt);
+			if (ships[i])
+				ships[i]->EnemyUpdate(dt);
 		}
-		if (Shiptimer > 10.0f)
-		{
-			RakNet::BitStream bs2;
-			float x = (rand() % 50)+200;
-			int ships_amt = rand() % 2+1;
-			unsigned char msgid = ID_NEWENEMYSHIP;
-			unsigned int type = 1;
-			//RakNet::BitStream bs;
-			for (int i = 0; i < ships_amt; ++i)
-			{
-				Ship* tempship = new Ship(type, x, 200 - 25* i);
-				int ID = ships.size();
-				tempship->setID(ID);
-				ships.push_back(tempship);
-				bs2.Write(msgid);
-				bs2.Write(ID);
-				bs2.Write(type);
-				bs2.Write(tempship->GetX());
-				bs2.Write(tempship->GetY());
-				std::cout << tempship->GetX() << "    " << tempship->GetY() << std::endl;
-				rakpeer_->Send(&bs2, HIGH_PRIORITY, RELIABLE, 0, packet->systemAddress, false);
-				bs2.Reset();
-			}
-			Shiptimer = 0;
-		}
+		CreateShips();
 		SendUpdatedShips(dt, packet->systemAddress);
+		UpdateTimeBomb(dt);
 		rakpeer_->DeallocatePacket(packet);
 	}
 }
+void ServerApp::RemoveShips(int ShipID,int damage)
+{
+	for (int i = 0; i < ships.size(); ++i)
+	{
+		if (ships[i]->GetID() == ShipID)
+		{
+			ships[i]->health -= damage;
+			if (ships[i]->health <= 0)
+			{
+				std::swap(ships[i], ships[ships.size() - 1]);
+				Ship*temp = ships[ships.size() - 1];
+				ships.pop_back();
+				if (rand() % 2)
+					CreatePowerUps(temp->GetX(), temp->GetY());
+				delete temp;
+			}
+			break;
+		}
+	}
+}
+void ServerApp::CreateShips()
+{
+	if (Shiptimer > 10.0f)
+	{
+		RakNet::BitStream bs2;
+		float x = (rand() % 50) + 200;
+		int ships_amt = rand() % 2 + 1;
+		unsigned char msgid = ID_NEWENEMYSHIP;
+		unsigned int type = 1;
+		//RakNet::BitStream bs;
+		Ship* tempship = new Ship(type, x, 200 - 25,5);
+		int ID = totalShips;
+		tempship->SetVelocityY(3.0f);
+		tempship->SetVelocityX(30.0f);
+		tempship->setID(ID);
+		ships.push_back(tempship);
+		bs2.Write(msgid);
+		bs2.Write(ID);
+		bs2.Write(type);
+		bs2.Write(tempship->GetX());
+		bs2.Write(tempship->GetY());
+		bs2.Write(tempship->health);
+		bs2.Write(tempship->GetVelocityX());
+		bs2.Write(tempship->GetVelocityY());
+		rakpeer_->Send(&bs2, HIGH_PRIORITY, RELIABLE, 0, UNASSIGNED_SYSTEM_ADDRESS, true);
+		bs2.Reset();
+		++totalShips;
+		Shiptimer = 0;
+	}
+}
+
 void ServerApp::SendUpdatedShips(float dt, SystemAddress& addr)
 {
 	if (ShipUpdateTimer > 1.3f)
 	{
 		RakNet::BitStream bs;
 		unsigned char msgid = ID_UPDATEENEMYSHIP;
+		unsigned int shipid;
 		for (int i = 0; i < ships.size(); ++i)
 		{
-			//bs.ResetReadPointer();
-			ships[i]->SetVelocityY(3.0f);
-			ships[i]->SetVelocityX(10.0f);
-			unsigned int shipid = ships[i]->GetID();
+			//bs.ResetReadPointer()		
+			shipid = ships[i]->GetID();
 			bs.Write(msgid);
 			bs.Write(shipid);
 			bs.Write(ships[i]->GetX());
 			bs.Write(ships[i]->GetY());
 			bs.Write(ships[i]->GetVelocityX());
 			bs.Write(ships[i]->GetVelocityY());
-			//std::cout << ships[i]->GetX() << "  velocity Y  " << ships[i]->GetY() << std::endl;
-			rakpeer_->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, addr, false);
+			rakpeer_->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, UNASSIGNED_SYSTEM_ADDRESS, true);
 			bs.Reset();
+			if (rand() % 3 == 0)
+			{
+				msgid = ID_NEWMISSILE;
+				bs.Write(msgid);
+				bs.Write(shipid);
+				bs.Write(ships[i]->totalMissileShot);
+				bs.Write(ships[i]->GetX());
+				bs.Write(ships[i]->GetY());
+				bs.Write(-ships[i]->GetW());
+				++ships[i]->totalMissileShot;
+				rakpeer_->Send(&bs, HIGH_PRIORITY, PacketReliability::RELIABLE_ORDERED, 0, UNASSIGNED_SYSTEM_ADDRESS, true);
+				bs.Reset();
+			}
 		}
 		ShipUpdateTimer = 0;
 	}
@@ -161,10 +226,80 @@ void ServerApp::UpdateShips(float dt)
 {
 	for (int i = 0; i < ships.size(); ++i)
 	{
-		ships[i]->AccelerateY(-1, dt, false);
+		//ships[i]->AccelerateY(-1, dt, false);
 		ships[i]->EnemyUpdate(dt);
 	}
 }
+
+void ServerApp::CreatePowerUps(float x,float y)
+{
+	PowerUp* powerup = new PowerUp(x, y, 0, 10,totalPowerUps);
+	powerUps.push_back(powerup);
+	++totalPowerUps;//increase total powerups count;
+	RakNet::BitStream bs;
+	unsigned char msgid = ID_NEWPOWERUP;
+	bs.Write(msgid);
+	bs.Write(powerup->ID);
+	bs.Write(x);
+	bs.Write(y);
+	bs.Write(0.0f);//vel_x
+	bs.Write(10.f);//vel_y
+	rakpeer_->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, UNASSIGNED_SYSTEM_ADDRESS, true);
+	bs.Reset();
+	std::cout << "PowerUps Created" << std::endl;
+}
+void ServerApp::RemovePowerUps(int PowerUPID)
+{
+	for (int i = 0; i < powerUps.size(); ++i)
+	{
+		if (powerUps[i]->ID == PowerUPID)
+		{
+			std::swap(powerUps[i], powerUps[powerUps.size() - 1]);
+			PowerUp*temp = powerUps[powerUps.size() - 1];
+			powerUps.pop_back();
+			delete temp;
+			break;
+		}
+	}
+}
+void ServerApp::UpdateTimeBomb(float dt)
+{
+	for (int i = 0; i < timeBomb.size(); ++i)
+	{
+		if (timeBomb[i]->Update(dt))
+		{
+			RakNet::BitStream bs;
+			std::vector<int>shipIdList;
+			unsigned char msgid = ID_TIMEBOMBEND;
+			bs.Write(msgid);//msgid
+			bs.Write(timeBomb[i]->ID);//bomb id
+			//explosion codes
+			for (int a = 0; a < ships.size(); ++a)
+			{
+				if ((ships[a]->GetX() - timeBomb[i]->x)*(ships[a]->GetX() - timeBomb[i]->x) +
+					(ships[a]->GetY() - timeBomb[i]->y)*(ships[a]->GetY() - timeBomb[i]->y) < 
+					timeBomb[i]->Radius * timeBomb[i]->Radius)
+				{
+					shipIdList.push_back(ships[a]->GetID());
+				}
+			}
+			bs.Write(shipIdList.size());//total ships hit
+			for (int a = 0; a < shipIdList.size(); ++a)
+			{
+				bs.Write(shipIdList[a]);//ship's id
+				RemoveShips(shipIdList[a],100);
+			}
+			rakpeer_->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, UNASSIGNED_SYSTEM_ADDRESS, true);
+			bs.Reset();
+			std::cout << "time bomb explode killed: " << shipIdList.size() << std::endl;
+			std::swap(timeBomb[i], timeBomb[timeBomb.size() - 1]);
+			delete timeBomb[timeBomb.size() -1];
+			timeBomb.pop_back();
+			break;
+		}
+	}
+}
+
 void ServerApp::SendWelcomePackage(SystemAddress& addr)
 {
 	++newID;
@@ -197,6 +332,9 @@ void ServerApp::SendWelcomePackage(SystemAddress& addr)
 		bs.Write(ships[i]->GetType());
 		bs.Write(ships[i]->GetX());
 		bs.Write(ships[i]->GetY());
+		bs.Write(ships[i]->health);
+		bs.Write(ships[i]->GetVelocityX());
+		bs.Write(ships[i]->GetVelocityY());
 		rakpeer_->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, addr, false);
 		bs.Reset();
 	}

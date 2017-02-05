@@ -63,8 +63,8 @@ class Ship
 
     unsigned int collidetimer;
 public:
-
-    Ship( int type, float locx_, float locy_);
+	int health;
+    Ship( int type, float locx_, float locy_,int health = 1);
     ~Ship();
     void Update( float timedelta );
 	void EnemyUpdate(float timedelta);

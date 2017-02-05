@@ -6,7 +6,6 @@
 #include "ship.h"
 #include "missile.h"
 
-
 Missile::Missile(char* filename, float x, float y, float w, int shipid ,int missileID) :
 	angular_velocity(0)
 {
@@ -25,7 +24,6 @@ Missile::Missile(char* filename, float x, float y, float w, int shipid ,int miss
 
 	x_ += velocity_x_ * 0.5f;
 	y_ += velocity_y_ * 0.5f;
-
 }
 
 Missile::~Missile()
@@ -35,12 +33,12 @@ Missile::~Missile()
 	hge->Release();
 }
 
-int Missile::Update(std::vector<Ship*> &shiplist, float timedelta)
+Missile_Collided Missile::Update(std::vector<Ship*> &shiplist, float timedelta)
 {
 	HGE* hge = hgeCreate(HGE_VERSION);
 	float pi = 3.141592654f*2;
-	float oldx, oldy;
-
+	//float oldx, oldy;
+	Missile_Collided collide;
 	w_ += angular_velocity * timedelta;
 	if (w_ > pi)
 		w_ -= pi;
@@ -48,21 +46,27 @@ int Missile::Update(std::vector<Ship*> &shiplist, float timedelta)
 	if (w_ < 0.0f)
 		w_ += pi;
 
-	oldx = x_;
-	oldy = y_;
+	//oldx = x_;
+	//oldy = y_;
 	x_ += velocity_x_ * timedelta;
 	y_ += velocity_y_ * timedelta;
-
-	for (std::vector<Ship*>::iterator thisship = shiplist.begin();
-		thisship != shiplist.end(); thisship++)
+	for (int i = 0; i < shiplist.size(); ++i)
 	{
-		if( HasCollided( (*(*thisship)) ) )
+		if (shiplist[i] && HasCollided(*shiplist[i]))
 		{
-			// if both are stuck
-			return true;
+			collide.collisionType = 1;
+			collide.ShipID = shiplist[i]->GetID();
+			--shiplist[i]->health;
+			if (shiplist[i]->health <= 0)
+			{
+				std::swap(shiplist[i], shiplist[shiplist.size() - 1]);
+				Ship*temp = shiplist[shiplist.size() - 1];
+				shiplist.pop_back();
+				delete temp;
+			}
+			return collide;
 		}
 	}
-
 	
 	float screenwidth = static_cast<float>(hge->System_GetState(HGE_SCREENWIDTH));
 	float screenheight = static_cast<float>(hge->System_GetState(HGE_SCREENHEIGHT));
@@ -70,16 +74,26 @@ int Missile::Update(std::vector<Ship*> &shiplist, float timedelta)
 	float spriteheight = sprite_->GetHeight();
 	
 	if (x_ < spritewidth / 2)
-		return 2;
+	{
+		collide.collisionType = 2;
+		return collide;
+	}
 	else if (x_ > screenwidth - spritewidth/2)
-		return 2;
-
+	{
+		collide.collisionType = 2;
+		return collide;
+	}
 	if (y_ < spriteheight/2)
-		return 2;
+	{
+		collide.collisionType = 2;
+		return collide;
+	}
 	else if (y_ > screenheight - spriteheight/2)
-		return 2;
-
-	return false;
+	{
+		collide.collisionType = 2;
+		return collide;
+	}
+	return collide;
 }
 
 void Missile::Render()
