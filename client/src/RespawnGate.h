@@ -1,28 +1,24 @@
 #pragma once
-#include <vector>
 #include <memory>
-#include <vector>
 
 #include "hge.h"
 
-
 class hgeSprite;
-class TimeBomb
+class hgeFont;
+
+
+class RespawnGate
 {
 public:
-
+	RespawnGate(float x,float y);
+	~RespawnGate();
 	HTEXTURE tex_; //!< Handle to the sprite's texture
 	std::auto_ptr<hgeSprite> sprite_; //!< The sprite used to display the ship
-
-	TimeBomb(float x,float y,float Radius,float time,int ID);
-	~TimeBomb();
+	void SetNewGate(float x, float y);
+	float GetX();
+	float GetY();
 	void Render();
-	bool Update(float dt);
+private:
 	float x;
 	float y;
-	float time;
-	float Radius;
-	int ID;
-private:
 };
-

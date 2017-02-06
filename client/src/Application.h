@@ -10,9 +10,10 @@
 #include "PowerUp.h"
 #include "Collided_Position.h"
 #include "TimeBomb.h"
+#include "RespawnGate.h"
+#include "PrintTextOnScreen.h"
 class HGE;
 class RakPeerInterface;
-
 //! The default angular velocity of the ship when it is in motion
 static const float DEFAULT_ANGULAR_VELOCITY = 3.0f; 
 //! The default acceleration of the ship when powered
@@ -35,19 +36,25 @@ class Application
 	std::vector<PowerUp*>powerUps;
 	std::vector<Collided_Position*>CollidedPosition;
 	std::vector<TimeBomb*>timebomb;
-    Asteroid *asteroid;
 	MissileList missiles_;
 	MissileList mymissile;
+    Asteroid *asteroid;
 	TextBox	*fpsbox;
 	TextBox *databox;
 	RakPeerInterface* rakpeer_;
 	unsigned int timer_;
+
+	float gateSetCooldown;
+	RespawnGate*respawnPosition;
+	
+	int score;
+	int weaponType;
 	int totalsent_;
 	int totalreceived_;
 	//missile upgrades allows you to shoot more missile
 	unsigned int WeaponUpgradeTier;
 	bool have_bomb;
-	bool keydown_enter;
+	float shootingCooldown;
 
 	bool Init();
 	static bool Loop();
@@ -56,7 +63,7 @@ class Application
 	bool SendInitialPosition();
 	void CreateMissile( float x, float y, float w, int id ,int missileID);
 	bool RemoveMissile( float x, float y, float w, int id ,int missileID);
-
+	void addPointsBy(int i);
 public:
 	Application();
 	~Application() throw();

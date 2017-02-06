@@ -26,15 +26,18 @@ Ship::Ship( int type, float locx_, float locy_,int health_)
 , velocity_y_( 0 )
 , id( 0 )
 , collidetimer( 0 )
+, health(health_)
+, RespawnTimer(5.0f)
 #ifdef INTERPOLATEMOVEMENT
 , server_w_(-PI / 4)
 , client_w_(-PI / 4)
 , server_velx_( 0 )
 , server_vely_( 0 )
 , ratio_( 1 )
-, health(health_)
 #endif
 {
+	respawn_x = 400;
+	respawn_y = 300;
     std::cout << "Creating Ship " << type << " " << locx_ << " " << locy_ << std::endl;
 #ifdef INTERPOLATEMOVEMENT
     x_ = server_x_ = client_x_ = locx_;
@@ -72,19 +75,7 @@ Ship::Ship( int type, float locx_, float locy_,int health_)
     font_.reset( new hgeFont( "font1.fnt" ) );
     font_->SetScale( 0.5 );
     sprite_->SetHotSpot( 32, 32 );
-
-    /*
-	x_ = server_x_ = client_x_ = locx_;
-	y_ = server_y_ = client_y_ = locy_;
-	HGE* hge = hgeCreate(HGE_VERSION);
-	tex_ = hge->Texture_Load(filename);
-	hge->Release();
-	sprite_.reset(new hgeSprite(tex_, 0, 0, 64, 64));
-
-	font_.reset(new hgeFont("font1.fnt"));
-	font_->SetScale( 0.5 );
-	sprite_->SetHotSpot(32,32);
-    */
+	dead = false;
 }
 
 
@@ -117,29 +108,22 @@ void Ship::Update(float timedelta)
 {
 	HGE* hge = hgeCreate(HGE_VERSION);
 
-	//server_w_ += angular_velocity * timedelta;
-
-	//if (server_w_ > PI)
-	//	server_w_ -= PI;
-
-	//if (server_w_ < 0.0f)
-	//	server_w_ += PI;
-
-	//client_w_ += angular_velocity * timedelta;
-
-	//if (client_w_ > PI)
-	//	client_w_ -= PI;
-
-	//if (client_w_ < 0.0f)
-	//	client_w_ += PI;
-
-	//w_ = ratio_ * server_w_ + (1 - ratio_) * client_w_;
-
-	//if (w_ > PI)
-	//	w_ -= PI;
-
-	//if (w_ < 0.0f)
-	//	w_ += PI;
+	if (dead)
+	{
+		RespawnTimer -= timedelta;
+		if (RespawnTimer <= 0)
+		{
+			dead = false;
+			x_ = respawn_x;
+			y_ = respawn_y;
+			server_x_ = respawn_x;
+			server_y_ = respawn_y;
+			client_x_ = respawn_x;
+			client_y_ = respawn_y;
+			health = 1;
+			RespawnTimer = 5.0f;
+		}
+	}
 
 	float screenwidth = static_cast<float>(hge->System_GetState(HGE_SCREENWIDTH));
 	float screenheight = static_cast<float>(hge->System_GetState(HGE_SCREENHEIGHT));
@@ -213,6 +197,7 @@ void Ship::Update(float timedelta)
 void Ship::EnemyUpdate(float timedelta)
 {
 
+
 	server_x_ += server_velx_ * timedelta;
 	server_y_ += server_vely_ * timedelta;
 
@@ -243,6 +228,8 @@ void Ship::EnemyUpdate(float timedelta)
 
 void Ship::Render()
 {
+	if (dead)
+		return;
 	sprite_->RenderEx(x_, y_, w_);
 
 	font_->printf(x_+5, y_+5, HGETEXT_LEFT, "%s", mytext_.c_str());
@@ -292,4 +279,9 @@ bool Ship::HasCollided( Ship &ship )
     sprite_->GetBoundingBox( x_, y_, &collidebox );
 
     return collidebox.Intersect( ship.GetBoundingBox( ) );
+}
+void Ship::SetRespawnPosition(float x, float y)
+{
+	respawn_x = x;
+	respawn_y = y;
 }

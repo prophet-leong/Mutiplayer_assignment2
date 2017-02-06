@@ -62,10 +62,15 @@ class Ship
     float angular_velocity;
 
     unsigned int collidetimer;
+	float RespawnTimer;
+	float respawn_x;
+	float respawn_y;
 public:
+	bool dead;
 	int health;
     Ship( int type, float locx_, float locy_,int health = 1);
     ~Ship();
+	
     void Update( float timedelta );
 	void EnemyUpdate(float timedelta);
     void Render( );
@@ -73,9 +78,11 @@ public:
 	void AccelerateX( float acceleration, float timedelta ,bool direction);
 	void AccelerateY(float acceleration, float timedelta, bool direction);
     void SetName( const char * text );
-
+	void SetRespawnTime(float resTime);
     hgeRect* GetBoundingBox( );
     bool HasCollided( Ship &ship );
+
+	void SetRespawnPosition(float x, float y);
 
     float GetVelocityX( ) { return velocity_x_; }
     float GetVelocityY( ) { return velocity_y_; }

@@ -35,6 +35,7 @@ class ServerApp
     unsigned int newID;
 	float Shiptimer = 0;
 	float ShipUpdateTimer = 0;
+	int ServerScore = 0;
 	std::vector<Ship*>ships;
 	std::vector<PowerUp*>powerUps;
 	std::vector<TimeBomb*>timeBomb;
@@ -50,6 +51,7 @@ class ServerApp
 	void CreateShips();
 	void RemoveShips(int ShipId,int damage = 1);
 	void SendUpdatedShips(float dt, SystemAddress& addr);
+	void SendScore();
 public:
 	ServerApp();
 	~ServerApp();

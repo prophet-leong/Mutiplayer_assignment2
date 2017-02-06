@@ -49,7 +49,7 @@ void ServerApp::Loop()
 		switch (msgid)
 		{
 		case ID_NEW_INCOMING_CONNECTION:
-			SendWelcomePackage(packet->systemAddress);
+				SendWelcomePackage(packet->systemAddress);
 			break;
 
 		case ID_DISCONNECTION_NOTIFICATION:
@@ -111,6 +111,12 @@ void ServerApp::Loop()
 			std::cout << "Get time bomb" << std::endl;
 			break;
 		}
+		case ID_NEWGATEPOSITION:
+			bs.ResetReadPointer();
+			rakpeer_->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, packet->systemAddress, true);
+		case ID_POWERUPEND:
+			bs.ResetReadPointer();
+			rakpeer_->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, packet->systemAddress, true);
 		default:
 			std::cout << "Unhandled Message Identifier: " << (int)msgid << std::endl;
 		}
@@ -144,6 +150,7 @@ void ServerApp::RemoveShips(int ShipID,int damage)
 			ships[i]->health -= damage;
 			if (ships[i]->health <= 0)
 			{
+				ServerScore += 50;
 				std::swap(ships[i], ships[ships.size() - 1]);
 				Ship*temp = ships[ships.size() - 1];
 				ships.pop_back();
@@ -190,6 +197,7 @@ void ServerApp::SendUpdatedShips(float dt, SystemAddress& addr)
 {
 	if (ShipUpdateTimer > 1.3f)
 	{
+		SendScore();
 		RakNet::BitStream bs;
 		unsigned char msgid = ID_UPDATEENEMYSHIP;
 		unsigned int shipid;
@@ -233,13 +241,13 @@ void ServerApp::UpdateShips(float dt)
 
 void ServerApp::CreatePowerUps(float x,float y)
 {
-	PowerUp* powerup = new PowerUp(x, y, 0, 10,totalPowerUps);
-	powerUps.push_back(powerup);
+	//PowerUp* powerup = new PowerUp(x, y, 0, 10,totalPowerUps);
+	//powerUps.push_back(powerup);
 	++totalPowerUps;//increase total powerups count;
 	RakNet::BitStream bs;
 	unsigned char msgid = ID_NEWPOWERUP;
 	bs.Write(msgid);
-	bs.Write(powerup->ID);
+	bs.Write(totalPowerUps);
 	bs.Write(x);
 	bs.Write(y);
 	bs.Write(0.0f);//vel_x
@@ -396,4 +404,13 @@ void ServerApp::UpdatePosition( SystemAddress& addr, float x_, float y_ )
 
     itr->second.x_ = x_;
     itr->second.y_ = y_;
+}
+void ServerApp::SendScore()
+{
+	unsigned char msgid = ID_SCOREUPDATE;
+	RakNet::BitStream bs;
+	bs.Write(msgid);
+	bs.Write(ServerScore);
+	rakpeer_->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, UNASSIGNED_SYSTEM_ADDRESS, true);
+	bs.Reset();
 }

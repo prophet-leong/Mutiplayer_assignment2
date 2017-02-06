@@ -33,7 +33,7 @@ Missile::~Missile()
 	hge->Release();
 }
 
-Missile_Collided Missile::Update(std::vector<Ship*> &shiplist, float timedelta)
+Missile_Collided Missile::Update(std::vector<Ship*> &shiplist, float timedelta,bool Ally)
 {
 	HGE* hge = hgeCreate(HGE_VERSION);
 	float pi = 3.141592654f*2;
@@ -52,11 +52,16 @@ Missile_Collided Missile::Update(std::vector<Ship*> &shiplist, float timedelta)
 	y_ += velocity_y_ * timedelta;
 	for (int i = 0; i < shiplist.size(); ++i)
 	{
-		if (shiplist[i] && HasCollided(*shiplist[i]))
+		if (!shiplist[i]->dead && HasCollided(*shiplist[i]))
 		{
 			collide.collisionType = 1;
 			collide.ShipID = shiplist[i]->GetID();
 			--shiplist[i]->health;
+			if (Ally)
+			{
+				shiplist[i]->dead = true;
+				return collide;
+			}
 			if (shiplist[i]->health <= 0)
 			{
 				std::swap(shiplist[i], shiplist[shiplist.size() - 1]);

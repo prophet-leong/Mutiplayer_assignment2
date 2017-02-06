@@ -13,7 +13,6 @@
 #include "Globals.h"
 #include "ship.h"
 #include "Application.h"
-//#include <iostream>
 #define BUFFERSIZE 256
 /** 
 * Constuctor
@@ -28,11 +27,14 @@ Application::Application() :
 	timer_( 0 ),
 	totalsent_(0),
 	totalreceived_(0),
-	keydown_enter( false ),
     asteroid( 0 ),
 	WeaponUpgradeTier(1),
 	have_bomb(false)
 {
+	gateSetCooldown = 0.f;
+	weaponType = 1;
+	shootingCooldown = 1.0f;
+	score = 0;
 }
 
 /**
@@ -47,7 +49,6 @@ Application::~Application() throw()
 	fpsbox = 0;
 	delete databox;
 	databox = 0;
-
 	Shutdown();
 	rakpeer_->Shutdown(100);
 	RakNetworkFactory::DestroyRakPeerInterface(rakpeer_);
@@ -72,12 +73,12 @@ bool Application::Init()
 	if(hge_->System_Initiate()) 
 	{
         asteroid = new Asteroid("asteroid.png" );
-        
+		respawnPosition = new RespawnGate(500, 300);
         fpsbox = new TextBox( "font1.fnt" );
 		fpsbox->SetPos( 5, 5 );
 
 		databox = new TextBox("font1.fnt");
-		databox->SetPos( 580, 5 );
+		databox->SetPos( 5, 5 );
 
         int ShipType = rand() % 4 + 1;
         float init_pos_x = (float)(rand() % 500 + 100);
@@ -85,10 +86,14 @@ bool Application::Init()
         ships_.push_back( new Ship( ShipType, init_pos_x, init_pos_y ) );
         std::cout << "My Ship: type[" << ShipType << "] x[" << init_pos_x << "] y[" << init_pos_y << "]" << std::endl;
 		ships_.at(0)->SetName("My Ship");
+		ships_.at(0)->SetRespawnPosition(respawnPosition->GetX(), respawnPosition->GetY());
 		if (rakpeer_->Startup(1,30,&SocketDescriptor(), 1))
 		{
+			//std::string a;
+			//std::cout << "server's ip address" << std::endl;
+			//std::cin >> a;
 			rakpeer_->SetOccasionalPing(true);
-            return rakpeer_->Connect( DFL_SERVER_IP, DFL_PORTNUMBER, 0, 0 );
+			return rakpeer_->Connect(DFL_SERVER_IP, DFL_PORTNUMBER, 0, 0);
 		}
 	}
 	return false;
@@ -113,67 +118,103 @@ bool Application::Update()
 
     float timedelta = hge_->Timer_GetDelta( );
 
-    ships_.at( 0 )->SetAngularVelocity( 0.0f );
-
-    if( hge_->Input_GetKeyState( HGEK_LEFT ) )
-    {
-       // ships_.at( 0 )->SetAngularVelocity( ships_.at( 0 )->GetAngularVelocity( ) - DEFAULT_ANGULAR_VELOCITY );
-		ships_.at(0)->AccelerateX(DEFAULT_ACCELERATION, timedelta, false);
-    }
-
-    if( hge_->Input_GetKeyState( HGEK_RIGHT ) )
-    {
-		ships_.at(0)->AccelerateX(DEFAULT_ACCELERATION, timedelta, true);
-    }
-
-    if( hge_->Input_GetKeyState( HGEK_UP ) )
-    {
-        ships_.at( 0 )->AccelerateY( DEFAULT_ACCELERATION, timedelta ,true);
-    }
-
-    if( hge_->Input_GetKeyState( HGEK_DOWN ) )
-    {
-        ships_.at( 0 )->AccelerateY( DEFAULT_ACCELERATION, timedelta ,false);
-    }
-
-    if( hge_->Input_GetKeyState( HGEK_SPACE ) )
+    //ships_.at( 0 )->SetAngularVelocity( 0.0f );
+	if (!ships_.at(0)->dead)
 	{
-		if( !keydown_enter )
+		if (hge_->Input_GetKeyState(HGEK_1) && weaponType != 1)
 		{
-			for (int i = floor(-(int)WeaponUpgradeTier / 2); i < ceil((float)WeaponUpgradeTier / 2); ++i)
+			weaponType = 1;
+			std::cout << "weapon 1" << std::endl;
+		}
+		if (hge_->Input_GetKeyState(HGEK_2) && weaponType != 2)
+		{
+			weaponType = 2;
+			std::cout << "weapon 2" << std::endl;
+		}
+		if( hge_->Input_GetKeyState( HGEK_LEFT ) )
+		{
+			ships_.at(0)->AccelerateX(DEFAULT_ACCELERATION, timedelta, false);
+		}
+
+		if( hge_->Input_GetKeyState( HGEK_RIGHT ) )
+		{
+			ships_.at(0)->AccelerateX(DEFAULT_ACCELERATION, timedelta, true);
+		}
+
+		if( hge_->Input_GetKeyState( HGEK_UP ) )
+		{
+			ships_.at( 0 )->AccelerateY( DEFAULT_ACCELERATION, timedelta ,true);
+		}
+
+		if( hge_->Input_GetKeyState( HGEK_DOWN ) )
+		{
+			ships_.at( 0 )->AccelerateY( DEFAULT_ACCELERATION, timedelta ,false);
+		}
+
+		if( hge_->Input_GetKeyState( HGEK_SPACE ) )
+		{
+			if( shootingCooldown <= 0 )
 			{
-				CreateMissile(ships_.at(0)->GetX() - i*10, ships_.at(0)->GetY(), ships_.at(0)->GetW(), ships_.at(0)->GetID(),mymissile.size());  
+				if (weaponType == 1)
+				{
+					for (int i = floor(-(int)WeaponUpgradeTier / 2); i < ceil((float)WeaponUpgradeTier / 2); ++i)
+					{
+						CreateMissile(ships_.at(0)->GetX() - i*10, ships_.at(0)->GetY(), ships_.at(0)->GetW(), ships_.at(0)->GetID(),mymissile.size());  
+					}
+					shootingCooldown = 0.33f;
+				}
+				else if (weaponType == 2)
+				{
+					for (int i = floor(-(int)7 / 2); i < ceil((float)7 / 2); ++i)
+					{
+						CreateMissile(ships_.at(0)->GetX() - i * 10, ships_.at(0)->GetY(), i * 0.3f - 1.57f, ships_.at(0)->GetID(), mymissile.size());
+					}
+					shootingCooldown = 2.0f - (float)(WeaponUpgradeTier * 0.3f);
+				}
 			}
-			keydown_enter = true;
 		}
-	}
-	else
-	{
-		if (keydown_enter)
+		if (shootingCooldown > 0)
 		{
-			keydown_enter = false;
+			shootingCooldown -= timedelta;
 		}
-	}
-	if (hge_->Input_GetKeyState(HGEK_X))
-	{
-		//complete this tmr
-		if (!have_bomb)
+		if (hge_->Input_GetKeyState(HGEK_X))
 		{
+			//complete this tmr
+			if (!have_bomb)
+			{
+				RakNet::BitStream bs;
+				unsigned char msgid = ID_TIMEBOMBCREATE;
+				TimeBomb* tb = new TimeBomb(ships_[0]->GetX(), ships_[0]->GetY(),100.f,1.0f,(int)ships_[0]->GetID());
+				timebomb.push_back(tb);
+				bs.Write(msgid);
+				bs.Write(tb->x);
+				bs.Write(tb->y);
+				bs.Write(tb->Radius);
+				bs.Write(tb->time);
+				bs.Write(tb->ID);
+				rakpeer_->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, UNASSIGNED_SYSTEM_ADDRESS, true);
+				have_bomb = true;
+				bs.Reset();
+			}
+		}
+		if (hge_->Input_GetKeyState(HGEK_C) && gateSetCooldown <= 0)
+		{
+			//set new gate location
+			respawnPosition->SetNewGate(ships_[0]->GetX(), ships_[0]->GetY());
+			ships_[0]->SetRespawnPosition(respawnPosition->GetX(), respawnPosition->GetY());
 			RakNet::BitStream bs;
-			unsigned char msgid = ID_TIMEBOMBCREATE;
-			TimeBomb* tb = new TimeBomb(ships_[0]->GetX(), ships_[0]->GetY(),100.f,1.0f,(int)ships_[0]->GetID());
-			timebomb.push_back(tb);
+			unsigned char msgid = ID_NEWGATEPOSITION;
 			bs.Write(msgid);
-			bs.Write(tb->x);
-			bs.Write(tb->y);
-			bs.Write(tb->Radius);
-			bs.Write(tb->time);
-			bs.Write(tb->ID);
+			bs.Write(respawnPosition->GetX());
+			bs.Write(respawnPosition->GetY());
 			rakpeer_->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, UNASSIGNED_SYSTEM_ADDRESS, true);
-			have_bomb = true;
+			gateSetCooldown = 10.f;
+		}
+		else if (gateSetCooldown > 0)
+		{
+			gateSetCooldown -= timedelta;
 		}
 	}
-
 
     // update ships
 	for (ShipList::iterator ship = ships_.begin();
@@ -199,6 +240,11 @@ bool Application::Update()
 	{
 		if (powerUps[i]->Update(timedelta, ships_[0]))
 		{
+			unsigned char msgid = ID_POWERUPEND;
+			RakNet::BitStream bs;
+			bs.Write(msgid);
+			bs.Write(powerUps[i]->ID);
+			rakpeer_->Send(&bs, HIGH_PRIORITY, RELIABLE, 0, UNASSIGNED_SYSTEM_ADDRESS, true);
 			++WeaponUpgradeTier;
 			std::swap(powerUps[i], powerUps[powerUps.size() - 1]);
 			PowerUp* temp = powerUps[powerUps.size() - 1];
@@ -238,7 +284,7 @@ bool Application::Update()
 	for (MissileList::iterator missile = missiles_.begin();missile != missiles_.end(); missile++)
 	{
 		
-		if ((*missile)->Update(ships_, timedelta).collisionType == 2)
+		if ((*missile)->Update(ships_, timedelta,true).collisionType == 2)
 		{
 			// have collision
 			delete *missile;
@@ -550,6 +596,19 @@ bool Application::Update()
 			std::cout << "PowerUps Created" << std::endl;
 			break;
 		}
+		case ID_POWERUPEND:
+			int ID;
+			bs.Read(ID);
+			for (int i = 0; i < powerUps.size(); ++i)
+			{
+				if (ID = powerUps[i]->ID)
+				{
+					std::swap(powerUps[i], powerUps[powerUps.size() - 1]);
+					delete powerUps[powerUps.size() - 1];
+					powerUps.pop_back();
+					break;
+				}
+			}
 		case ID_TIMEBOMBEND:
 			std::cout << "client timebomb explode" << std::endl;
 			unsigned int bombID;
@@ -557,7 +616,7 @@ bool Application::Update()
 			int ShipID;
 			bs.Read(bombID);//bomb id
 			bs.Read(shipSize);//total ships hit
-			for (int i = 0; i < shipSize; ++i)
+			for (int i = 0; i < shipSize; ++i)//delete ship
 			{
 				bs.Read(ShipID);//ship's id
 				for (int a = 0; a < EnemyShips.size(); ++i)
@@ -571,6 +630,29 @@ bool Application::Update()
 					}
 				}
 			}
+			for (int i = 0; i < timebomb.size(); ++i)//delete bomb
+			{
+				if (timebomb[i]->ID = bombID)
+				{
+					CollidedPosition.push_back(new Collided_Position(timebomb[i]->x, timebomb[i]->y, 0.3f));
+					std::swap(timebomb[i], timebomb[timebomb.size() - 1]);
+					delete timebomb[timebomb.size() - 1];
+					timebomb.pop_back();
+					break;
+				}
+			}
+			break;
+		case ID_NEWGATEPOSITION:
+			float x, y;
+			bs.Read(x);//bomb id
+			bs.Read(y);//total ships hit
+			respawnPosition->SetNewGate(x, y);
+			ships_[0]->SetRespawnPosition(respawnPosition->GetX(), respawnPosition->GetY());
+			break;
+		case ID_SCOREUPDATE:
+			bs.Read(score);
+			databox->mytext_ = "SCORE :  " + std::to_string(score);
+			std::cout << databox->mytext_ << std::endl;
 			break;
 		default:
 			std::cout << "Unhandled Message Identifier: " << (int)msgid << std::endl;
@@ -618,9 +700,6 @@ bool Application::Update()
 */
 void Application::Render()
 {
-	std::string fps;
-	char temp[BUFFERSIZE];
-
 	hge_->Gfx_BeginScene();
 	hge_->Gfx_Clear(0);
 
@@ -630,6 +709,11 @@ void Application::Render()
         asteroid->Render( );
     }
 
+	respawnPosition->Render();
+	for (int i = 0; i < timebomb.size(); ++i)
+	{
+		timebomb[i]->Render();
+	}
     // render spaceships
 	ShipList::iterator itr;
 	for (itr = ships_.begin(); itr != ships_.end(); itr++)
@@ -658,7 +742,7 @@ void Application::Render()
 	{
 		CollidedPosition[i]->Render();
 	}
-
+	databox->Render();
 	hge_->Gfx_EndScene();
 }
 
@@ -785,4 +869,8 @@ void Application::CreateMissile(float x, float y, float w, int id,int missileID)
 		rakpeer_->Send(&bs, HIGH_PRIORITY,PacketReliability::RELIABLE_ORDERED, 0, UNASSIGNED_SYSTEM_ADDRESS, true);
 
 	}
+}
+void Application::addPointsBy(int points)
+{
+	score += points;
 }

@@ -13,17 +13,17 @@ PowerUp::PowerUp(float x, float y, float vel_x, float vel_y,int ID)
 	this->vel_x = vel_x;
 	this->vel_y = vel_y;
 	HGE* hge = hgeCreate(HGE_VERSION);
-	tex_ = hge->Texture_Load("boom.png");
+	tex_ = hge->Texture_Load("powerup.png");
 
 	hge->Release();
-	sprite_.reset(new hgeSprite(tex_, 0, 0, 64, 64));
+	sprite_.reset(new hgeSprite(tex_, 0, 0, 32, 32));
 }
 bool PowerUp::Update(float dt,Ship* ship)
 {
 	x += vel_x*dt;
 	y += vel_y*dt;
 
-	return ((x - ship->GetX())*(x - ship->GetX()) + (y - ship->GetY())*(y - ship->GetY()) < 100.f);
+	return ((x - ship->GetX())*(x - ship->GetX()) + (y - ship->GetY())*(y - ship->GetY()) < 32.f*32.f);
 }
 void PowerUp::Render()
 {
